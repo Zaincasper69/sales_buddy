@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; 
-import 'screens/add_product_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'screens/home_screen.dart'; 
 
 void main() {
   runApp(const MyApp());
@@ -19,8 +19,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.notoSansSinhalaTextTheme(),
       ),
-
-      home: const AddProductScreen(), 
+      home: const HomeScreen(), 
     );
   }
 }
