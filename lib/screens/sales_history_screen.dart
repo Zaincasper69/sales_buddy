@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../db/database_helper.dart';
+import 'bill_details_screen.dart';
 
 class SalesHistoryScreen extends StatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -28,8 +29,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     double tSales = 0;
 
     for (var sale in data) {
-      tProfit += sale['net_profit'];
-      tSales += sale['total_amount'];
+      tProfit += double.parse(sale['net_profit'].toString());
+      tSales += double.parse(sale['total_amount'].toString());
     }
 
     setState(() {
@@ -71,7 +72,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                     const Text("මුළු ලාභය", style: TextStyle(fontSize: 16, color: Colors.grey)),
                     Text(
                       "Rs. ${_totalProfit.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                      style: TextStyle(
+                        fontSize: 20, 
+                        fontWeight: FontWeight.bold, 
+                        color: _totalProfit >= 0 ? Colors.green : Colors.red
+                      ),
                     ),
                   ],
                 ),
@@ -90,29 +95,43 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           final sale = _sales[index];
                           final date = DateTime.parse(sale['date']);
                           final formattedDate = DateFormat('yyyy-MM-dd hh:mm a').format(date);
+                          final profit = double.parse(sale['net_profit'].toString());
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.purple.shade100,
-                                child: const Icon(Icons.receipt_long, color: Colors.purple),
-                              ),
-                              title: Text(sale['shop_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(formattedDate),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    "Rs. ${sale['total_amount']}",
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                  ),
-                                  Text(
-                                    "Profit: Rs. ${sale['net_profit']}",
-                                    style: const TextStyle(color: Colors.green, fontSize: 12),
-                                  ),
-                                ],
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BillDetailsScreen(sale: sale),
+                                ),
+                              );
+                            },
+                            child: Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.purple.shade100,
+                                  child: const Icon(Icons.receipt_long, color: Colors.purple),
+                                ),
+                                title: Text(sale['shop_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(formattedDate),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "Rs. ${sale['total_amount']}",
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    Text(
+                                      "Profit: Rs. ${sale['net_profit']}",
+                                      style: TextStyle(
+                                        color: profit >= 0 ? Colors.green : Colors.red,
+                                        fontSize: 12
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
