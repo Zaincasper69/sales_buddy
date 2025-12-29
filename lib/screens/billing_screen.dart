@@ -11,11 +11,13 @@ class BillingScreen extends StatefulWidget {
 class _BillingScreenState extends State<BillingScreen> {
   final TextEditingController _shopNameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
-  final TextEditingController _discountController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController(); 
 
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _cartItems = [];
-  Map<String, dynamic>? _selectedProduct;
+  
+  int? _selectedProductId; 
+  Map<String, dynamic>? _selectedProductObj;
 
   @override
   void initState() {
@@ -30,25 +32,42 @@ class _BillingScreenState extends State<BillingScreen> {
     });
   }
 
+  void _onProductSelect(int? id) {
+    if (id == null) return;
+
+    final product = _allProducts.firstWhere((element) => element['id'] == id);
+
+    setState(() {
+      _selectedProductId = id;
+      _selectedProductObj = product;
+
+      _priceController.text = product['selling_price'].toString();
+      _qtyController.text = "1";
+    });
+  }
+
   void _addToCart() {
-    if (_selectedProduct == null || _qtyController.text.isEmpty) return;
+    if (_selectedProductObj == null || _qtyController.text.isEmpty || _priceController.text.isEmpty) return;
 
     final int qty = int.parse(_qtyController.text);
-    final double sellingPrice = _selectedProduct!['selling_price'];
-    final double buyingPrice = _selectedProduct!['buying_price'];
+    final double sellingPrice = double.parse(_priceController.text);
+    final double buyingPrice = _selectedProductObj!['buying_price'];
     final double subTotal = sellingPrice * qty;
 
     setState(() {
       _cartItems.add({
-        'product_id': _selectedProduct!['id'],
-        'product_name': _selectedProduct!['name'],
+        'product_id': _selectedProductObj!['id'],
+        'product_name': _selectedProductObj!['name'],
         'buying_price': buyingPrice,
         'selling_price': sellingPrice,
         'qty': qty,
         'sub_total': subTotal,
       });
-      _selectedProduct = null;
+      
+      _selectedProductId = null;
+      _selectedProductObj = null;
       _qtyController.clear();
+      _priceController.clear();
     });
   }
 
@@ -69,22 +88,20 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     double totalAmount = _calculateTotal();
-    double discount = _discountController.text.isNotEmpty 
-        ? double.parse(_discountController.text) 
-        : 0.0;
-
+    
     double totalProfit = 0;
     for (var item in _cartItems) {
       double itemProfit = (item['selling_price'] - item['buying_price']) * item['qty'];
       totalProfit += itemProfit;
     }
-    double netProfit = totalProfit - discount;
+    
+    double netProfit = totalProfit;
 
     Map<String, dynamic> saleRow = {
       'shop_name': _shopNameController.text,
       'date': DateTime.now().toIso8601String(),
       'total_amount': totalAmount,
-      'discount': discount,
+      'discount': 0.0,
       'net_profit': netProfit,
     };
 
@@ -128,72 +145,100 @@ class _BillingScreenState extends State<BillingScreen> {
             ),
             const SizedBox(height: 20),
             
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: DropdownButtonFormField<Map<String, dynamic>>(
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                children: [
+                  DropdownButtonFormField<int>(
                     decoration: const InputDecoration(
                       labelText: "අයිටම් එක තෝරන්න",
-                      border: OutlineInputBorder(),
+                      border: InputBorder.none,
                     ),
-                    value: _selectedProduct,
+                    isExpanded: true,
+                    value: _selectedProductId,
                     items: _allProducts.map((product) {
-                      return DropdownMenuItem(
-                        value: product,
+                      return DropdownMenuItem<int>(
+                        value: product['id'] as int,
                         child: Text(
-                          "${product['name']} (Rs.${product['selling_price']})",
+                          product['name'],
                           overflow: TextOverflow.ellipsis,
                         ),
                       );
                     }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedProduct = val;
-                      });
-                    },
+                    onChanged: _onProductSelect,
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 1,
-                  child: TextField(
-                    controller: _qtyController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Qty",
-                      border: OutlineInputBorder(),
-                    ),
+                  
+                  const Divider(),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: _priceController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "මිල (Price)",
+                            prefixText: "Rs.",
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      
+                      Expanded(
+                        flex: 1,
+                        child: TextField(
+                          controller: _qtyController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "Qty",
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      
+                      IconButton.filled(
+                        onPressed: _addToCart,
+                        icon: const Icon(Icons.add),
+                        style: IconButton.styleFrom(backgroundColor: Colors.green),
+                      )
+                    ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                IconButton.filled(
-                  onPressed: _addToCart,
-                  icon: const Icon(Icons.add),
-                  style: IconButton.styleFrom(backgroundColor: Colors.green),
-                )
-              ],
+                ],
+              ),
             ),
-            const Divider(height: 30),
+            
+            const SizedBox(height: 10),
+            const Divider(thickness: 2),
             
             Expanded(
               child: _cartItems.isEmpty
-                  ? const Center(child: Text("තවම බඩු ඇතුලත් කර නැත"))
+                  ? const Center(child: Text("තවම බඩු ඇතුලත් කර නැත", style: TextStyle(color: Colors.grey)))
                   : ListView.builder(
                       itemCount: _cartItems.length,
                       itemBuilder: (context, index) {
                         final item = _cartItems[index];
                         return Card(
-                          color: Colors.grey.shade100,
+                          color: Colors.white,
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(vertical: 5),
                           child: ListTile(
-                            title: Text(item['product_name']),
-                            subtitle: Text("${item['qty']} x ${item['selling_price']}"),
+                            title: Text(item['product_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text("${item['qty']} x Rs.${item['selling_price']}"),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   "Rs. ${item['sub_total']}",
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.remove_circle, color: Colors.red),
@@ -211,17 +256,6 @@ class _BillingScreenState extends State<BillingScreen> {
                     ),
             ),
             
-            const Divider(),
-            TextField(
-              controller: _discountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "වට්ටම් (Discount)",
-                prefixIcon: Icon(Icons.local_offer, color: Colors.orange),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
@@ -235,12 +269,13 @@ class _BillingScreenState extends State<BillingScreen> {
                   const Text("මුළු එකතුව (Total):", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(
                     "Rs. ${_calculateTotal()}",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 10),
+            
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -249,6 +284,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: const Text("බිල දාන්න (Complete Sale)", style: TextStyle(fontSize: 18)),
               ),
