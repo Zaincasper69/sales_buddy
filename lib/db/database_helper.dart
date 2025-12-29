@@ -21,7 +21,6 @@ class DatabaseHelper {
   }
 
   Future _createDB(Database db, int version) async {
-
     await db.execute('''
     CREATE TABLE products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +41,7 @@ class DatabaseHelper {
       net_profit REAL NOT NULL 
     )
     ''');
-    
+
     await db.execute('''
     CREATE TABLE sale_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,16 +64,24 @@ class DatabaseHelper {
     return await db.query('products', orderBy: 'name ASC');
   }
 
-  Future<int> addSale(Map<String, dynamic> saleRow, List<Map<String, dynamic>> items) async {
+  Future<int> addSale(
+    Map<String, dynamic> saleRow,
+    List<Map<String, dynamic>> items,
+  ) async {
     final db = await instance.database;
     return await db.transaction((txn) async {
       int saleId = await txn.insert('sales', saleRow);
-      
+
       for (var item in items) {
         item['sale_id'] = saleId;
         await txn.insert('sale_items', item);
       }
       return saleId;
     });
+  }
+
+  Future<List<Map<String, dynamic>>> getAllSales() async {
+    final db = await instance.database;
+    return await db.query('sales', orderBy: 'date DESC');
   }
 }

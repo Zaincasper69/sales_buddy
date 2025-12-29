@@ -1,0 +1,126 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../db/database_helper.dart';
+
+class SalesHistoryScreen extends StatefulWidget {
+  const SalesHistoryScreen({super.key});
+
+  @override
+  State<SalesHistoryScreen> createState() => _SalesHistoryScreenState();
+}
+
+class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
+  List<Map<String, dynamic>> _sales = [];
+  bool _isLoading = true;
+  double _totalProfit = 0;
+  double _totalSales = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSales();
+  }
+
+  Future<void> _loadSales() async {
+    final data = await DatabaseHelper.instance.getAllSales();
+    
+    double tProfit = 0;
+    double tSales = 0;
+
+    for (var sale in data) {
+      tProfit += sale['net_profit'];
+      tSales += sale['total_amount'];
+    }
+
+    setState(() {
+      _sales = data;
+      _totalProfit = tProfit;
+      _totalSales = tSales;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("විකුණුම් ඉතිහාසය (History)"),
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: Colors.purple.shade50,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    const Text("මුළු ආදායම", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    Text(
+                      "Rs. ${_totalSales.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple),
+                    ),
+                  ],
+                ),
+                Container(height: 40, width: 1, color: Colors.grey),
+                Column(
+                  children: [
+                    const Text("මුළු ලාභය", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    Text(
+                      "Rs. ${_totalProfit.toStringAsFixed(2)}",
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _sales.isEmpty
+                    ? const Center(child: Text("තවම විකුණුම් සිදුකර නැත"))
+                    : ListView.builder(
+                        itemCount: _sales.length,
+                        itemBuilder: (context, index) {
+                          final sale = _sales[index];
+                          final date = DateTime.parse(sale['date']);
+                          final formattedDate = DateFormat('yyyy-MM-dd hh:mm a').format(date);
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.purple.shade100,
+                                child: const Icon(Icons.receipt_long, color: Colors.purple),
+                              ),
+                              title: Text(sale['shop_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(formattedDate),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    "Rs. ${sale['total_amount']}",
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  Text(
+                                    "Profit: Rs. ${sale['net_profit']}",
+                                    style: const TextStyle(color: Colors.green, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}

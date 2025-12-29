@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'stock_list_screen.dart';
 import 'billing_screen.dart';
+import 'sales_history_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -57,9 +58,10 @@ class HomeScreen extends StatelessWidget {
               title: "ආදායම බලන්න (History)",
               color: Colors.purple,
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("රිපෝට් කොටස අපි පසුව හදමු... 🛠️"),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SalesHistoryScreen(),
                   ),
                 );
               },
