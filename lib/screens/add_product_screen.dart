@@ -11,13 +11,10 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _buyingPriceController = TextEditingController();
-  final TextEditingController _sellingPriceController = TextEditingController();
+  final TextEditingController _qtyController = TextEditingController();
   
   Future<void> _saveProduct() async {
-
-    if (_nameController.text.isEmpty || 
-        _buyingPriceController.text.isEmpty || 
-        _sellingPriceController.text.isEmpty) {
+    if (_nameController.text.isEmpty || _buyingPriceController.text.isEmpty || _qtyController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('කරුණාකර සියලු විස්තර පුරවන්න! ⚠️'), backgroundColor: Colors.orange),
       );
@@ -27,20 +24,20 @@ class _AddProductScreenState extends State<AddProductScreen> {
     try {
       final String name = _nameController.text;
       final double buyingPrice = double.parse(_buyingPriceController.text);
-      final double sellingPrice = double.parse(_sellingPriceController.text);
+      final int stock = int.parse(_qtyController.text);
 
       Map<String, dynamic> row = {
         'name': name,
         'buying_price': buyingPrice,
-        'selling_price': sellingPrice,
-        'stock': 0
+        'selling_price': 0.0, 
+        'stock': stock 
       };
 
       await DatabaseHelper.instance.addProduct(row);
 
       _nameController.clear();
       _buyingPriceController.clear();
-      _sellingPriceController.clear();
+      _qtyController.clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -64,13 +61,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
         backgroundColor: Colors.blueAccent,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
+      body: SingleChildScrollView( 
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
               const SizedBox(height: 10),
-
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -83,7 +79,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               
               TextField(
                 controller: _buyingPriceController,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.number, 
                 decoration: const InputDecoration(
                   labelText: "ගත්තු මිල (Buying Price)",
                   border: OutlineInputBorder(),
@@ -94,13 +90,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 15),
 
               TextField(
-                controller: _sellingPriceController,
-                keyboardType: TextInputType.number,
+                controller: _qtyController,
+                keyboardType: TextInputType.number, 
                 decoration: const InputDecoration(
-                  labelText: "විකුණන මිල (Selling Price)",
+                  labelText: "ප්‍රමාණය (Initial Stock)",
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.arrow_upward, color: Colors.green),
-                  suffixText: "LKR"
+                  prefixIcon: Icon(Icons.inventory_2, color: Colors.orange),
                 ),
               ),
               const SizedBox(height: 30),
