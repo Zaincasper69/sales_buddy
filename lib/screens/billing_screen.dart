@@ -227,7 +227,7 @@ class _BillingScreenState extends State<BillingScreen> {
                         flex: 2,
                         child: TextField(
                           controller: _priceController,
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           decoration: const InputDecoration(
                             labelText: "මිල (Price)",
                             prefixText: "Rs.",
@@ -298,7 +298,7 @@ class _BillingScreenState extends State<BillingScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  "Rs. ${item['sub_total']}",
+                                  "Rs. ${item['sub_total'].toStringAsFixed(2)}",
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black87),
@@ -333,7 +333,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(
-                    "Rs. ${_calculateTotal()}",
+                    "Rs. ${_calculateTotal().toStringAsFixed(2)}",
                     style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
