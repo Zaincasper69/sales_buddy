@@ -11,12 +11,12 @@ class BillingScreen extends StatefulWidget {
 class _BillingScreenState extends State<BillingScreen> {
   final TextEditingController _shopNameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController(); 
+  final TextEditingController _priceController = TextEditingController();
 
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _cartItems = [];
-  
-  int? _selectedProductId; 
+
+  int? _selectedProductId;
   Map<String, dynamic>? _selectedProductObj;
 
   @override
@@ -47,12 +47,21 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   void _addToCart() {
-    if (_selectedProductObj == null || _qtyController.text.isEmpty || _priceController.text.isEmpty) return;
+    if (_selectedProductObj == null ||
+        _qtyController.text.isEmpty ||
+        _priceController.text.isEmpty) return;
 
     final int qty = int.parse(_qtyController.text);
     final double sellingPrice = double.parse(_priceController.text);
     final double buyingPrice = _selectedProductObj!['buying_price'];
     final double subTotal = sellingPrice * qty;
+
+    int currentStock = _selectedProductObj!['stock'];
+    if (qty > currentStock) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("ස්ටොක් එක මදි!"), backgroundColor: Colors.red));
+      return;
+    }
 
     setState(() {
       _cartItems.add({
@@ -63,7 +72,7 @@ class _BillingScreenState extends State<BillingScreen> {
         'qty': qty,
         'sub_total': subTotal,
       });
-      
+
       _selectedProductId = null;
       _selectedProductObj = null;
       _qtyController.clear();
@@ -88,13 +97,14 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     double totalAmount = _calculateTotal();
-    
+
     double totalProfit = 0;
     for (var item in _cartItems) {
-      double itemProfit = (item['selling_price'] - item['buying_price']) * item['qty'];
+      double itemProfit =
+          (item['selling_price'] - item['buying_price']) * item['qty'];
       totalProfit += itemProfit;
     }
-    
+
     double netProfit = totalProfit;
 
     Map<String, dynamic> saleRow = {
@@ -107,6 +117,7 @@ class _BillingScreenState extends State<BillingScreen> {
 
     List<Map<String, dynamic>> saleItems = _cartItems.map((item) {
       return {
+        'product_id': item['product_id'],
         'product_name': item['product_name'],
         'quantity': item['qty'],
         'price_per_unit': item['selling_price']
@@ -115,9 +126,13 @@ class _BillingScreenState extends State<BillingScreen> {
 
     await DatabaseHelper.instance.addSale(saleRow, saleItems);
 
+    await _loadProducts();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('බිල සාර්ථකව සේව් කරා! ✅'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('බිල සාර්ථකව සේව් කරා! ✅'),
+            backgroundColor: Colors.green),
       );
       Navigator.pop(context);
     }
@@ -144,7 +159,6 @@ class _BillingScreenState extends State<BillingScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -171,9 +185,42 @@ class _BillingScreenState extends State<BillingScreen> {
                     }).toList(),
                     onChanged: _onProductSelect,
                   ),
-                  
+                  if (_selectedProductObj != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: Colors.orange.shade200)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "ගත්ත මිල: Rs. ${_selectedProductObj!['buying_price']}",
+                              style: TextStyle(
+                                color: Colors.brown[700],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "ඇත (Stock): ${_selectedProductObj!['stock']}",
+                              style: TextStyle(
+                                color: (_selectedProductObj!['stock'] ?? 0) > 0
+                                    ? Colors.green[800]
+                                    : Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const Divider(),
-
                   Row(
                     children: [
                       Expanded(
@@ -184,13 +231,13 @@ class _BillingScreenState extends State<BillingScreen> {
                           decoration: const InputDecoration(
                             labelText: "මිල (Price)",
                             prefixText: "Rs.",
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
                             border: OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      
                       Expanded(
                         flex: 1,
                         child: TextField(
@@ -198,30 +245,31 @@ class _BillingScreenState extends State<BillingScreen> {
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: "Qty",
-                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
                             border: OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
-                      
                       IconButton.filled(
                         onPressed: _addToCart,
                         icon: const Icon(Icons.add),
-                        style: IconButton.styleFrom(backgroundColor: Colors.green),
+                        style: IconButton.styleFrom(
+                            backgroundColor: Colors.green),
                       )
                     ],
                   ),
                 ],
               ),
             ),
-            
             const SizedBox(height: 10),
             const Divider(thickness: 2),
-            
             Expanded(
               child: _cartItems.isEmpty
-                  ? const Center(child: Text("තවම බඩු ඇතුලත් කර නැත", style: TextStyle(color: Colors.grey)))
+                  ? const Center(
+                      child: Text("තවම බඩු ඇතුලත් කර නැත",
+                          style: TextStyle(color: Colors.grey)))
                   : ListView.builder(
                       itemCount: _cartItems.length,
                       itemBuilder: (context, index) {
@@ -231,17 +279,33 @@ class _BillingScreenState extends State<BillingScreen> {
                           elevation: 2,
                           margin: const EdgeInsets.symmetric(vertical: 5),
                           child: ListTile(
-                            title: Text(item['product_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text("${item['qty']} x Rs.${item['selling_price']}"),
+                            title: Text(item['product_name'],
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    "${item['qty']} x Rs.${item['selling_price']}"),
+                                Text(
+                                  "Cost: Rs.${item['buying_price']}",
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.grey[600]),
+                                )
+                              ],
+                            ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
                                   "Rs. ${item['sub_total']}",
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.remove_circle, color: Colors.red),
+                                  icon: const Icon(Icons.remove_circle,
+                                      color: Colors.red),
                                   onPressed: () {
                                     setState(() {
                                       _cartItems.removeAt(index);
@@ -255,7 +319,6 @@ class _BillingScreenState extends State<BillingScreen> {
                       },
                     ),
             ),
-            
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
@@ -266,16 +329,20 @@ class _BillingScreenState extends State<BillingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text("මුළු එකතුව (Total):", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("මුළු එකතුව (Total):",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(
                     "Rs. ${_calculateTotal()}",
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 10),
-            
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -284,9 +351,11 @@ class _BillingScreenState extends State<BillingScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text("බිල දාන්න (Complete Sale)", style: TextStyle(fontSize: 18)),
+                child: const Text("බිල දාන්න (Complete Sale)",
+                    style: TextStyle(fontSize: 18)),
               ),
             ),
           ],
