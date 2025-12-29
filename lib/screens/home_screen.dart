@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'stock_list_screen.dart'; 
+import 'stock_list_screen.dart';
+import 'billing_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,15 +19,17 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             _buildDashboardButton(
               context,
               icon: Icons.calculate,
               title: "බිලක් දාන්න (New Sale)",
               color: Colors.green,
               onTap: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("බිල් දාන කොටස අපි ඊළඟට හදනවා... 🛠️")),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BillingScreen(),
+                  ),
                 );
               },
             ),
@@ -38,10 +41,11 @@ class HomeScreen extends StatelessWidget {
               title: "බඩු විස්තර (Stock List)",
               color: Colors.orange,
               onTap: () {
-
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const StockListScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const StockListScreen(),
+                  ),
                 );
               },
             ),
@@ -53,8 +57,10 @@ class HomeScreen extends StatelessWidget {
               title: "ආදායම බලන්න (History)",
               color: Colors.purple,
               onTap: () {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("රිපෝට් කොටස අපි පසුව හදමු... 🛠️")),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("රිපෝට් කොටස අපි පසුව හදමු... 🛠️"),
+                  ),
                 );
               },
             ),
@@ -64,7 +70,13 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDashboardButton(BuildContext context, {required IconData icon, required String title, required Color color, required VoidCallback onTap}) {
+  Widget _buildDashboardButton(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 100,
