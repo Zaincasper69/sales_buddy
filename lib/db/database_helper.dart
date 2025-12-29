@@ -73,8 +73,22 @@ class DatabaseHelper {
       int saleId = await txn.insert('sales', saleRow);
 
       for (var item in items) {
-        item['sale_id'] = saleId;
-        await txn.insert('sale_items', item);
+        int productId = item['product_id'];
+        int qty = item['quantity'];
+
+        await txn.rawUpdate(
+          'UPDATE products SET stock = stock - ? WHERE id = ?',
+          [qty, productId],
+        );
+
+        Map<String, dynamic> itemToInsert = {
+          'sale_id': saleId,
+          'product_name': item['product_name'],
+          'quantity': item['quantity'],
+          'price_per_unit': item['price_per_unit']
+        };
+
+        await txn.insert('sale_items', itemToInsert);
       }
       return saleId;
     });
@@ -83,5 +97,23 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllSales() async {
     final db = await instance.database;
     return await db.query('sales', orderBy: 'date DESC');
+  }
+
+  Future<int> deleteProduct(int id) async {
+    final db = await instance.database;
+    return await db.delete('products', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getSaleItems(int saleId) async {
+    final db = await instance.database;
+    return await db.query('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
+  }
+
+  Future<void> deleteSale(int saleId) async {
+    final db = await instance.database;
+    await db.transaction((txn) async {
+      await txn.delete('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
+      await txn.delete('sales', where: 'id = ?', whereArgs: [saleId]);
+    });
   }
 }
