@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../db/database_helper.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -23,13 +24,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
     try {
       final String name = _nameController.text;
-      final double buyingPrice = double.parse(_buyingPriceController.text);
+      
+      String priceText = _buyingPriceController.text.replaceAll(',', '.');
+      final double price = double.parse(priceText);
+      
       final int stock = int.parse(_qtyController.text);
 
       Map<String, dynamic> row = {
         'name': name,
-        'buying_price': buyingPrice,
-        'selling_price': 0.0, 
+        'code': '', 
+        'buying_price': price,
+        'selling_price': price, 
         'stock': stock 
       };
 
@@ -47,7 +52,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('වැරදීමක් සිදුවුනා. ඉලක්කම් පමණක් භාවිතා කරන්න.'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('මිල සඳහා නිවැරදි ඉලක්කම් භාවිතා කරන්න.'), backgroundColor: Colors.red),
         );
       }
     }
@@ -79,9 +84,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
               
               TextField(
                 controller: _buyingPriceController,
-                keyboardType: TextInputType.number, 
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), 
+                ],
                 decoration: const InputDecoration(
-                  labelText: "ගත්තු මිල (Buying Price)",
+                  labelText: "මිල (Price)",
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.arrow_downward, color: Colors.red),
                   suffixText: "LKR"
