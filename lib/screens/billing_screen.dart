@@ -12,11 +12,12 @@ class _BillingScreenState extends State<BillingScreen> {
   final TextEditingController _shopNameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _allProducts = [];
+  List<Map<String, dynamic>> _foundProducts = [];
   List<Map<String, dynamic>> _cartItems = [];
 
-  int? _selectedProductId;
   Map<String, dynamic>? _selectedProductObj;
 
   @override
@@ -29,20 +30,47 @@ class _BillingScreenState extends State<BillingScreen> {
     final data = await DatabaseHelper.instance.getAllProducts();
     setState(() {
       _allProducts = data;
+      _foundProducts = data;
     });
   }
 
-  void _onProductSelect(int? id) {
-    if (id == null) return;
-
-    final product = _allProducts.firstWhere((element) => element['id'] == id);
-
+  void _runFilter(String enteredKeyword) {
+    List<Map<String, dynamic>> results = [];
+    if (enteredKeyword.isEmpty) {
+      results = _allProducts;
+    } else {
+      results = _allProducts
+          .where((product) =>
+              product["name"]
+                  .toString()
+                  .toLowerCase()
+                  .contains(enteredKeyword.toLowerCase()) ||
+              product["code"]
+                  .toString()
+                  .toLowerCase()
+                  .contains(enteredKeyword.toLowerCase()))
+          .toList();
+    }
     setState(() {
-      _selectedProductId = id;
-      _selectedProductObj = product;
+      _foundProducts = results;
+    });
+  }
 
+  void _onProductSelect(Map<String, dynamic> product) {
+    setState(() {
+      _selectedProductObj = product;
       _priceController.text = product['selling_price'].toString();
       _qtyController.text = "1";
+    });
+  }
+
+  void _resetSelection() {
+    setState(() {
+      _selectedProductObj = null;
+      _qtyController.clear();
+      _priceController.clear();
+      _searchController.clear();
+      _foundProducts = _allProducts;
     });
   }
 
@@ -58,8 +86,8 @@ class _BillingScreenState extends State<BillingScreen> {
 
     int currentStock = _selectedProductObj!['stock'];
     if (qty > currentStock) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("ස්ටොක් එක මදි!"), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("ස්ටොක් එක මදි!"), backgroundColor: Colors.red));
       return;
     }
 
@@ -73,10 +101,7 @@ class _BillingScreenState extends State<BillingScreen> {
         'sub_total': subTotal,
       });
 
-      _selectedProductId = null;
-      _selectedProductObj = null;
-      _qtyController.clear();
-      _priceController.clear();
+      _resetSelection();
     });
   }
 
@@ -97,22 +122,20 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     double totalAmount = _calculateTotal();
-
     double totalProfit = 0;
+
     for (var item in _cartItems) {
       double itemProfit =
           (item['selling_price'] - item['buying_price']) * item['qty'];
       totalProfit += itemProfit;
     }
 
-    double netProfit = totalProfit;
-
     Map<String, dynamic> saleRow = {
       'shop_name': _shopNameController.text,
       'date': DateTime.now().toIso8601String(),
       'total_amount': totalAmount,
       'discount': 0.0,
-      'net_profit': netProfit,
+      'net_profit': totalProfit,
     };
 
     List<Map<String, dynamic>> saleItems = _cartItems.map((item) {
@@ -125,7 +148,6 @@ class _BillingScreenState extends State<BillingScreen> {
     }).toList();
 
     await DatabaseHelper.instance.addSale(saleRow, saleItems);
-
     await _loadProducts();
 
     if (mounted) {
@@ -158,7 +180,7 @@ class _BillingScreenState extends State<BillingScreen> {
                 prefixIcon: Icon(Icons.store),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 15),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
@@ -167,25 +189,61 @@ class _BillingScreenState extends State<BillingScreen> {
               ),
               child: Column(
                 children: [
-                  DropdownButtonFormField<int>(
-                    decoration: const InputDecoration(
-                      labelText: "අයිටම් එක තෝරන්න",
-                      border: InputBorder.none,
+                  if (_selectedProductObj == null) ...[
+                    TextField(
+                      controller: _searchController,
+                      onChanged: _runFilter,
+                      decoration: const InputDecoration(
+                        labelText: 'අයිටම් එක සොයන්න (Search Item)',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                      ),
                     ),
-                    isExpanded: true,
-                    value: _selectedProductId,
-                    items: _allProducts.map((product) {
-                      return DropdownMenuItem<int>(
-                        value: product['id'] as int,
-                        child: Text(
-                          product['name'],
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: 150,
+                      child: _foundProducts.isNotEmpty
+                          ? ListView.builder(
+                              itemCount: _foundProducts.length,
+                              itemBuilder: (context, index) {
+                                final product = _foundProducts[index];
+                                return Card(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: ListTile(
+                                    dense: true,
+                                    title: Text(product['name'],
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    subtitle: Text(
+                                        "Code: ${product['code']} | Stock: ${product['stock']}"),
+                                    trailing: Text(
+                                        "Rs.${product['selling_price']}"),
+                                    onTap: () => _onProductSelect(product),
+                                  ),
+                                );
+                              },
+                            )
+                          : const Center(child: Text("ගැලපෙන අයිටම් නැත")),
+                    ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _selectedProductObj!['name'],
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      );
-                    }).toList(),
-                    onChanged: _onProductSelect,
-                  ),
-                  if (_selectedProductObj != null)
+                        IconButton(
+                          onPressed: _resetSelection,
+                          icon: const Icon(Icons.close, color: Colors.red),
+                        )
+                      ],
+                    ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Container(
@@ -202,9 +260,8 @@ class _BillingScreenState extends State<BillingScreen> {
                             Text(
                               "ගත්ත මිල: Rs. ${_selectedProductObj!['buying_price']}",
                               style: TextStyle(
-                                color: Colors.brown[700],
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: Colors.brown[700],
+                                  fontWeight: FontWeight.bold),
                             ),
                             Text(
                               "ඇත (Stock): ${_selectedProductObj!['stock']}",
@@ -220,46 +277,48 @@ class _BillingScreenState extends State<BillingScreen> {
                         ),
                       ),
                     ),
-                  const Divider(),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextField(
-                          controller: _priceController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: "මිල (Price)",
-                            prefixText: "Rs.",
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            border: OutlineInputBorder(),
+                    const Divider(),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: _priceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: "මිල (Price)",
+                              prefixText: "Rs.",
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 1,
-                        child: TextField(
-                          controller: _qtyController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: "Qty",
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            border: OutlineInputBorder(),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 1,
+                          child: TextField(
+                            controller: _qtyController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: "Qty",
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      IconButton.filled(
-                        onPressed: _addToCart,
-                        icon: const Icon(Icons.add),
-                        style: IconButton.styleFrom(
-                            backgroundColor: Colors.green),
-                      )
-                    ],
-                  ),
+                        const SizedBox(width: 10),
+                        IconButton.filled(
+                          onPressed: _addToCart,
+                          icon: const Icon(Icons.add),
+                          style: IconButton.styleFrom(
+                              backgroundColor: Colors.green),
+                        )
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -287,11 +346,6 @@ class _BillingScreenState extends State<BillingScreen> {
                               children: [
                                 Text(
                                     "${item['qty']} x Rs.${item['selling_price']}"),
-                                Text(
-                                  "Cost: Rs.${item['buying_price']}",
-                                  style: TextStyle(
-                                      fontSize: 10, color: Colors.grey[600]),
-                                )
                               ],
                             ),
                             trailing: Row(
