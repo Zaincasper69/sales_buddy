@@ -25,6 +25,7 @@ class DatabaseHelper {
     CREATE TABLE products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
+      code TEXT,
       buying_price REAL NOT NULL, 
       selling_price REAL NOT NULL,
       stock INTEGER NOT NULL
