@@ -24,7 +24,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   Future<void> _loadSales() async {
     final data = await DatabaseHelper.instance.getAllSales();
-    
+
     double tProfit = 0;
     double tSales = 0;
 
@@ -59,31 +59,34 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
               children: [
                 Column(
                   children: [
-                    const Text("මුළු ආදායම", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    const Text("මුළු ආදායම",
+                        style: TextStyle(fontSize: 16, color: Colors.grey)),
                     Text(
                       "Rs. ${_totalSales.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.purple),
+                      style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple),
                     ),
                   ],
                 ),
                 Container(height: 40, width: 1, color: Colors.grey),
                 Column(
                   children: [
-                    const Text("මුළු ලාභය", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    const Text("මුළු ලාභය",
+                        style: TextStyle(fontSize: 16, color: Colors.grey)),
                     Text(
                       "Rs. ${_totalProfit.toStringAsFixed(2)}",
                       style: TextStyle(
-                        fontSize: 20, 
-                        fontWeight: FontWeight.bold, 
-                        color: _totalProfit >= 0 ? Colors.green : Colors.red
-                      ),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: _totalProfit >= 0 ? Colors.green : Colors.red),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -94,41 +97,51 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         itemBuilder: (context, index) {
                           final sale = _sales[index];
                           final date = DateTime.parse(sale['date']);
-                          final formattedDate = DateFormat('yyyy-MM-dd hh:mm a').format(date);
-                          final profit = double.parse(sale['net_profit'].toString());
+                          final formattedDate =
+                              DateFormat('yyyy-MM-dd hh:mm a').format(date);
+                          final profit =
+                              double.parse(sale['net_profit'].toString());
 
                           return GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => BillDetailsScreen(sale: sale),
+                                  builder: (context) =>
+                                      BillDetailsScreen(sale: sale),
                                 ),
                               );
                             },
                             child: Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
                               child: ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.purple.shade100,
-                                  child: const Icon(Icons.receipt_long, color: Colors.purple),
+                                  child: const Icon(Icons.receipt_long,
+                                      color: Colors.purple),
                                 ),
-                                title: Text(sale['shop_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                                title: Text(sale['shop_name'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
                                 subtitle: Text(formattedDate),
                                 trailing: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      "Rs. ${sale['total_amount']}",
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      "Rs. ${sale['total_amount'].toStringAsFixed(2)}",
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
                                     ),
                                     Text(
-                                      "Profit: Rs. ${sale['net_profit']}",
+                                      "Profit: Rs. ${sale['net_profit'].toStringAsFixed(2)}",
                                       style: TextStyle(
-                                        color: profit >= 0 ? Colors.green : Colors.red,
-                                        fontSize: 12
-                                      ),
+                                          color: profit >= 0
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontSize: 12),
                                     ),
                                   ],
                                 ),
