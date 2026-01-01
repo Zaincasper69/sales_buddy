@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'stock_list_screen.dart';
 import 'billing_screen.dart';
 import 'sales_history_screen.dart';
+import 'manage_routes_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -66,6 +67,22 @@ class HomeScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 20),
+
+            _buildDashboardButton(
+              context,
+              icon: Icons.map,
+              title: "Manage Routes (මාර්ග/කඩ)",
+              color: Colors.teal,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ManageRoutesScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -81,7 +98,7 @@ class HomeScreen extends StatelessWidget {
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 100,
+      height: 80,
       child: ElevatedButton.icon(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
@@ -92,10 +109,10 @@ class HomeScreen extends StatelessWidget {
           ),
           elevation: 5,
         ),
-        icon: Icon(icon, size: 40),
+        icon: Icon(icon, size: 35),
         label: Text(
           title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
     );
