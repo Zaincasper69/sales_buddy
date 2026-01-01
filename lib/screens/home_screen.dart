@@ -17,6 +17,13 @@ class _HomeScreenState extends State<HomeScreen> {
   double _todaySales = 0.0;
   double _todayExpenses = 0.0;
   double _netCash = 0.0;
+  
+  List<Map<String, dynamic>> _routes = [];
+  int? _selectedRouteId;
+  
+  int _totalShopsInRoute = 0;
+  int _visitedShopsCount = 0;
+  
   bool _isLoading = true;
 
   @override
@@ -31,17 +38,26 @@ class _HomeScreenState extends State<HomeScreen> {
     String today = DateTime.now().toIso8601String().split('T')[0];
 
     final sales = await DatabaseHelper.instance.getAllSales();
+    final expenses = await DatabaseHelper.instance.getExpensesByDate(today);
+    final routes = await DatabaseHelper.instance.getAllRoutes();
+
     double salesSum = 0;
+    List<String> billedShopNames = [];
+
     for (var sale in sales) {
       if (sale['date'].toString().startsWith(today)) {
         salesSum += double.parse(sale['total_amount'].toString());
+        billedShopNames.add(sale['shop_name']); 
       }
     }
 
-    final expenses = await DatabaseHelper.instance.getExpensesByDate(today);
     double expenseSum = 0;
     for (var exp in expenses) {
       expenseSum += double.parse(exp['amount'].toString());
+    }
+
+    if (_selectedRouteId != null) {
+      await _calculateRouteProgress(_selectedRouteId!, billedShopNames);
     }
 
     if (mounted) {
@@ -49,9 +65,51 @@ class _HomeScreenState extends State<HomeScreen> {
         _todaySales = salesSum;
         _todayExpenses = expenseSum;
         _netCash = salesSum - expenseSum;
+        _routes = routes;
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _calculateRouteProgress(int routeId, List<String> billedShopsToday) async {
+    final shopsInRoute = await DatabaseHelper.instance.getShopsByRoute(routeId);
+    
+    int visited = 0;
+    for (var shop in shopsInRoute) {
+      if (billedShopsToday.contains(shop['name'])) {
+        visited++;
+      }
+    }
+
+    setState(() {
+      _totalShopsInRoute = shopsInRoute.length;
+      _visitedShopsCount = visited;
+    });
+  }
+
+  Future<void> _onRouteSelected(int? routeId) async {
+    if (routeId == null) return;
+    
+    setState(() {
+      _selectedRouteId = routeId;
+      _isLoading = true;
+    });
+
+    String today = DateTime.now().toIso8601String().split('T')[0];
+    final sales = await DatabaseHelper.instance.getAllSales();
+    
+    List<String> billedShopNames = [];
+    for (var sale in sales) {
+      if (sale['date'].toString().startsWith(today)) {
+        billedShopNames.add(sale['shop_name']);
+      }
+    }
+
+    await _calculateRouteProgress(routeId, billedShopNames);
+    
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
@@ -138,7 +196,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
                             ],
                           ),
-                        )
+                        ),
+                        
+                        const SizedBox(height: 15),
+                        const Divider(),
+                        
+                        DropdownButtonFormField<int>(
+                          isExpanded: true, 
+                          decoration: const InputDecoration(
+                            labelText: "රූට් එක තෝරන්න (Select Route)", 
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            prefixIcon: Icon(Icons.map, color: Colors.orange),
+                          ),
+                          value: _selectedRouteId,
+                          items: _routes.map((route) {
+                            return DropdownMenuItem<int>(
+                              value: route['id'],
+                              child: Text(
+                                route['name'],
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: _onRouteSelected,
+                        ),
+
+                        if (_selectedRouteId != null) ...[
+                          const SizedBox(height: 15),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text("ආවරණය කළ කඩ: $_visitedShopsCount / $_totalShopsInRoute", 
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text("${((_totalShopsInRoute == 0 ? 0 : _visitedShopsCount / _totalShopsInRoute) * 100).toStringAsFixed(0)}%", 
+                                style: const TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+                          LinearProgressIndicator(
+                            value: _totalShopsInRoute == 0 ? 0 : _visitedShopsCount / _totalShopsInRoute,
+                            backgroundColor: Colors.grey.shade200,
+                            color: Colors.orange,
+                            minHeight: 8,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ]
                       ],
                     ),
                   ),
