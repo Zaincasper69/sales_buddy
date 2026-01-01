@@ -69,6 +69,16 @@ class DatabaseHelper {
       FOREIGN KEY (route_id) REFERENCES routes (id)
     )
     ''');
+
+    await db.execute('''
+    CREATE TABLE expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      note TEXT,
+      date TEXT NOT NULL
+    )
+    ''');
   }
 
   Future<int> addProduct(Map<String, dynamic> row) async {
@@ -162,5 +172,20 @@ class DatabaseHelper {
   Future<int> deleteShop(int id) async {
     final db = await instance.database;
     return await db.delete('shops', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> addExpense(Map<String, dynamic> row) async {
+    final db = await instance.database;
+    return await db.insert('expenses', row);
+  }
+
+  Future<List<Map<String, dynamic>>> getExpensesByDate(String dateStr) async {
+    final db = await instance.database;
+    return await db.query('expenses', where: 'date LIKE ?', whereArgs: ['$dateStr%'], orderBy: 'id DESC');
+  }
+
+  Future<int> deleteExpense(int id) async {
+    final db = await instance.database;
+    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 }
