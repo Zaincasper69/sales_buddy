@@ -53,6 +53,22 @@ class DatabaseHelper {
       FOREIGN KEY (sale_id) REFERENCES sales (id)
     )
     ''');
+
+    await db.execute('''
+    CREATE TABLE routes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL
+    )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE shops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      route_id INTEGER NOT NULL,
+      FOREIGN KEY (route_id) REFERENCES routes (id)
+    )
+    ''');
   }
 
   Future<int> addProduct(Map<String, dynamic> row) async {
@@ -116,5 +132,35 @@ class DatabaseHelper {
       await txn.delete('sale_items', where: 'sale_id = ?', whereArgs: [saleId]);
       await txn.delete('sales', where: 'id = ?', whereArgs: [saleId]);
     });
+  }
+
+  Future<int> addRoute(String name) async {
+    final db = await instance.database;
+    return await db.insert('routes', {'name': name});
+  }
+
+  Future<List<Map<String, dynamic>>> getAllRoutes() async {
+    final db = await instance.database;
+    return await db.query('routes', orderBy: 'name ASC');
+  }
+
+  Future<int> deleteRoute(int id) async {
+    final db = await instance.database;
+    return await db.delete('routes', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> addShop(String name, int routeId) async {
+    final db = await instance.database;
+    return await db.insert('shops', {'name': name, 'route_id': routeId});
+  }
+
+  Future<List<Map<String, dynamic>>> getShopsByRoute(int routeId) async {
+    final db = await instance.database;
+    return await db.query('shops', where: 'route_id = ?', whereArgs: [routeId], orderBy: 'name ASC');
+  }
+
+  Future<int> deleteShop(int id) async {
+    final db = await instance.database;
+    return await db.delete('shops', where: 'id = ?', whereArgs: [id]);
   }
 }
