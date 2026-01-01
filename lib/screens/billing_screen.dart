@@ -9,7 +9,6 @@ class BillingScreen extends StatefulWidget {
 }
 
 class _BillingScreenState extends State<BillingScreen> {
-  final TextEditingController _shopNameController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
@@ -17,20 +16,62 @@ class _BillingScreenState extends State<BillingScreen> {
   List<Map<String, dynamic>> _allProducts = [];
   List<Map<String, dynamic>> _foundProducts = [];
   List<Map<String, dynamic>> _cartItems = [];
+  
+  List<Map<String, dynamic>> _routes = [];
+  List<Map<String, dynamic>> _shops = [];
+
+  int? _selectedRouteId;
+  int? _selectedShopId;
+  String? _selectedShopName;
 
   Map<String, dynamic>? _selectedProductObj;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _loadInitialData();
   }
 
-  Future<void> _loadProducts() async {
-    final data = await DatabaseHelper.instance.getAllProducts();
+  Future<void> _loadInitialData() async {
+    final products = await DatabaseHelper.instance.getAllProducts();
+    final routes = await DatabaseHelper.instance.getAllRoutes();
+    
     setState(() {
-      _allProducts = data;
-      _foundProducts = data;
+      _allProducts = products;
+      _foundProducts = products;
+      _routes = routes;
+    });
+  }
+
+  Future<void> _onRouteSelect(int? routeId) async {
+    setState(() {
+      _selectedRouteId = routeId;
+      _selectedShopId = null;
+      _selectedShopName = null;
+      _shops = [];
+    });
+
+    if (routeId != null) {
+      final shops = await DatabaseHelper.instance.getShopsByRoute(routeId);
+      setState(() {
+        _shops = shops;
+      });
+    }
+  }
+
+  void _onShopSelect(int? shopId) {
+    if (shopId == null) {
+      setState(() {
+        _selectedShopId = null;
+        _selectedShopName = null;
+      });
+      return;
+    }
+
+    final shop = _shops.firstWhere((element) => element['id'] == shopId);
+    setState(() {
+      _selectedShopId = shopId;
+      _selectedShopName = shop['name'];
     });
   }
 
@@ -114,9 +155,9 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   Future<void> _saveSale() async {
-    if (_shopNameController.text.isEmpty || _cartItems.isEmpty) {
+    if (_selectedShopName == null || _cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('කරුණාකර කඩේ නම සහ බඩු ඇතුලත් කරන්න!')),
+        const SnackBar(content: Text('කරුණාකර කඩයක් තෝරන්න සහ බඩු ඇතුලත් කරන්න!')),
       );
       return;
     }
@@ -131,7 +172,7 @@ class _BillingScreenState extends State<BillingScreen> {
     }
 
     Map<String, dynamic> saleRow = {
-      'shop_name': _shopNameController.text,
+      'shop_name': _selectedShopName,
       'date': DateTime.now().toIso8601String(),
       'total_amount': totalAmount,
       'discount': 0.0,
@@ -148,7 +189,12 @@ class _BillingScreenState extends State<BillingScreen> {
     }).toList();
 
     await DatabaseHelper.instance.addSale(saleRow, saleItems);
-    await _loadProducts();
+    
+    final products = await DatabaseHelper.instance.getAllProducts();
+    setState(() {
+       _allProducts = products;
+       _foundProducts = products;
+    });
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,13 +218,36 @@ class _BillingScreenState extends State<BillingScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: _shopNameController,
+            DropdownButtonFormField<int>(
               decoration: const InputDecoration(
-                labelText: "කඩේ නම (Shop Name)",
+                labelText: "මාර්ගය තෝරන්න (Select Route)",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.map),
+              ),
+              value: _selectedRouteId,
+              items: _routes.map((route) {
+                return DropdownMenuItem<int>(
+                  value: route['id'],
+                  child: Text(route['name']),
+                );
+              }).toList(),
+              onChanged: _onRouteSelect,
+            ),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<int>(
+              decoration: const InputDecoration(
+                labelText: "කඩය තෝරන්න (Select Shop)",
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.store),
               ),
+              value: _selectedShopId,
+              items: _shops.map((shop) {
+                return DropdownMenuItem<int>(
+                  value: shop['id'],
+                  child: Text(shop['name']),
+                );
+              }).toList(),
+              onChanged: _shops.isEmpty ? null : _onShopSelect,
             ),
             const SizedBox(height: 15),
             Container(
